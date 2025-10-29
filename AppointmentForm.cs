@@ -27,7 +27,8 @@ namespace SimpleHMS
 
         // This method creates all the UI controls (dropdowns, buttons, etc.)
         private void InitializeComponent()
-        {
+        {   
+            // icon 
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             Icon = (Icon)resources.GetObject("$this.Icon");
             // Set form properties
