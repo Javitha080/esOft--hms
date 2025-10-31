@@ -15,7 +15,8 @@ namespace SimpleHMS
             
             // Run the application and show the MainForm window
             // This line opens the main menu and keeps the program running
-            Application.Run(new LoginForm());
+            var loginForm = new LoginForm();
+            Application.Run(loginForm);
             
             // When MainForm is closed, the program exits
         }

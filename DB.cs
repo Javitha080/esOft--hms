@@ -1,67 +1,71 @@
+using System;
 using System.Data;
 using Microsoft.Data.SqlClient;
+using System.Configuration;
 
 namespace SimpleHMS
 {
-    // DB - Database class for .NET 9
-    // This class handles all database operations
-    // It has 2 simple methods: GetData (for SELECT) and SetData (for INSERT/UPDATE/DELETE)
-    public class DB
+    // Database helper for .NET 9
+    public static class DB
     {
-        // Connection string - tells the program how to connect to SQL Server
-        // Update "Data Source" to match your SQL Server name
-        static string conn = "Data Source=JAVITHA00\\SQLEXPRESS;Initial Catalog=SimpleHospitalDB;Integrated Security=True";
+        private static readonly string conn = 
+            "Data Source=localhost\\SQLEXPRESS;Initial Catalog=SimpleHospitalDB;Integrated Security=True;TrustServerCertificate=True;";
+            
+        // Get connection string
+        public static string GetConnectionString()
+        {
+            return conn;
+        }
         
-        // Explanation of connection string parts:
-        // - Data Source=localhost : Your SQL Server location (change if needed)
-        // - Initial Catalog=SimpleHospitalDB : Database name
-        // - Integrated Security=True : Use Windows authentication (no username/password needed)
-        // - TrustServerCertificate=True : Required for .NET 9 to trust SQL Server certificate
+        // Get SqlConnection object
+        public static SqlConnection GetConnection()
+        {
+            return new SqlConnection(conn);
+        }
 
-        // GetData() - Used for SELECT queries (getting data from database)
-        // Returns: DataTable containing the query results
-        // Example: DataTable dt = DB.GetData("SELECT * FROM Patients");
+        // SELECT queries
         public static DataTable GetData(string query)
         {
-            // Create a new DataTable to store the results
             DataTable dt = new DataTable();
-            
-            // using statement ensures connection is closed automatically
+
             using (SqlConnection con = new SqlConnection(conn))
+            using (SqlDataAdapter da = new SqlDataAdapter(query, con))
             {
-                // SqlDataAdapter executes the query and fills the DataTable
-                SqlDataAdapter da = new SqlDataAdapter(query, con);
-                da.Fill(dt); // Fill the DataTable with query results
+                da.Fill(dt);
             }
-            
-            // Return the DataTable with all the data
+
             return dt;
         }
 
-        // SetData() - Used for INSERT, UPDATE, DELETE queries (changing data in database)
-        // Returns: Number of rows affected (1 = success, 0 = failed)
-        // Example: int result = DB.SetData("INSERT INTO Patients (Name, Age) VALUES ('John', 30)");
+        // INSERT / UPDATE / DELETE queries
         public static int SetData(string query)
         {
-            // using statement ensures connection is closed automatically
             using (SqlConnection con = new SqlConnection(conn))
+            using (SqlCommand cmd = new SqlCommand(query, con))
             {
-                // Create a command object with the query
-                SqlCommand cmd = new SqlCommand(query, con);
-                
-                // Open the database connection
                 con.Open();
-                
-                // ExecuteNonQuery() runs the query and returns number of rows affected
-                int rows = cmd.ExecuteNonQuery();
-                
-                // Close the database connection
-                con.Close();
-                
-                // Return the number of rows affected
-                return rows;
+                return cmd.ExecuteNonQuery();
+            }
+        }
+        
+        // Check if database connection is available
+        public static bool IsConnected()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(conn))
+                    return false;
+                    
+                using (SqlConnection connection = new SqlConnection(conn))
+                {
+                    connection.Open();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
             }
         }
     }
 }
-

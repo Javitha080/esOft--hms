@@ -1,5 +1,7 @@
 using System;
 using System.Data;
+using System.Drawing;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace SimpleHMS
@@ -9,12 +11,25 @@ namespace SimpleHMS
     public partial class PatientForm : Form
     {
         // Declare all the controls we'll use
-        TextBox txtName, txtAge, txtPhone, txtAddress;
-        ComboBox cmbGender;
-        DataGridView dgv;
-        Button btnAdd, btnUpdate, btnDelete, btnClear;
-        ToolTip tooltip; // Tooltip shows hints when you hover over controls
-        int selectedPatientID = 0; // Stores the ID of selected patient (0 means no selection)
+        private TextBox txtName;
+        private TextBox txtAge;
+        private TextBox txtPhone;
+        private TextBox txtAddress;
+        private TextBox txtEmail;
+        private ComboBox cmbGender;
+        private DataGridView dgv;
+        private Button btnAdd;
+        private Button btnUpdate;
+        private Button btnDelete;
+        private Button btnClear;
+        private ToolTip tooltip;
+        private Label lblName;
+        private Label lblAge;
+        private Label lblGender;
+        private Label lblPhone;
+        private Label lblAddress;
+        private Label lblEmail;
+        private int selectedPatientID = 0; // Stores the ID of selected patient (0 means no selection)
 
         // Constructor - runs when form is created
         public PatientForm()
@@ -23,113 +38,287 @@ namespace SimpleHMS
             LoadPatients(); // Load existing patients into the grid
         }
 
-        // This method creates all the UI controls (textboxes, buttons, etc.)
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
-            Icon = (Icon)resources.GetObject("$this.Icon");
-            // Set form properties
-            this.Text = "Patient Registration"; // Form title
-            this.Size = new System.Drawing.Size(700, 500); // Form size (width, height)
-            this.StartPosition = FormStartPosition.CenterScreen; // Open in center of screen
-
-            // Initialize ToolTip - shows helpful hints when hovering
-            tooltip = new ToolTip();
-            tooltip.AutoPopDelay = 5000; // How long tooltip stays visible (5 seconds)
-            tooltip.InitialDelay = 500; // Delay before showing tooltip (0.5 seconds)
-
-            // Name Label and TextBox
-            Label lblName = new Label() { Text = "Name:", Location = new System.Drawing.Point(20, 20), Size = new System.Drawing.Size(80, 20) };
-            txtName = new TextBox() { Location = new System.Drawing.Point(100, 20), Size = new System.Drawing.Size(200, 20) };
-            tooltip.SetToolTip(lblName, "Enter patient's full name"); // Tooltip for label
-            tooltip.SetToolTip(txtName, "Type the patient's full name here"); // Tooltip for textbox
-            this.Controls.Add(lblName); // Add label to form
-            this.Controls.Add(txtName); // Add textbox to form
-
-            // Age Label and TextBox
-            Label lblAge = new Label() { Text = "Age:", Location = new System.Drawing.Point(20, 50), Size = new System.Drawing.Size(80, 20) };
-            txtAge = new TextBox() { Location = new System.Drawing.Point(100, 50), Size = new System.Drawing.Size(200, 20) };
+            components = new System.ComponentModel.Container();
+            tooltip = new ToolTip(components);
+            lblEmail = new Label();
+            txtEmail = new TextBox();
+            lblName = new Label();
+            txtName = new TextBox();
+            lblAge = new Label();
+            txtAge = new TextBox();
+            lblGender = new Label();
+            cmbGender = new ComboBox();
+            lblPhone = new Label();
+            txtPhone = new TextBox();
+            lblAddress = new Label();
+            txtAddress = new TextBox();
+            btnAdd = new Button();
+            btnUpdate = new Button();
+            btnDelete = new Button();
+            btnClear = new Button();
+            dgv = new DataGridView();
+            ((System.ComponentModel.ISupportInitialize)dgv).BeginInit();
+            SuspendLayout();
+            // 
+            // tooltip
+            // 
+            tooltip.AutoPopDelay = 5000;
+            tooltip.InitialDelay = 500;
+            tooltip.ReshowDelay = 100;
+            // 
+            // lblEmail
+            // 
+            lblEmail.Location = new Point(23, 196);
+            lblEmail.Margin = new Padding(4, 0, 4, 0);
+            lblEmail.Name = "lblEmail";
+            lblEmail.Size = new Size(93, 23);
+            lblEmail.TabIndex = 10;
+            lblEmail.Text = "Email:";
+            tooltip.SetToolTip(lblEmail, "Enter patient's email address");
+            // 
+            // txtEmail
+            // 
+            txtEmail.Location = new Point(117, 196);
+            txtEmail.Margin = new Padding(4, 3, 4, 3);
+            txtEmail.Name = "txtEmail";
+            txtEmail.Size = new Size(233, 23);
+            txtEmail.TabIndex = 11;
+            tooltip.SetToolTip(txtEmail, "Type the patient's email address for billing");
+            txtEmail.TextChanged += txtEmail_TextChanged;
+            // 
+            // lblName
+            // 
+            lblName.Location = new Point(23, 23);
+            lblName.Margin = new Padding(4, 0, 4, 0);
+            lblName.Name = "lblName";
+            lblName.Size = new Size(93, 23);
+            lblName.TabIndex = 0;
+            lblName.Text = "Name:";
+            tooltip.SetToolTip(lblName, "Enter patient's full name");
+            // 
+            // txtName
+            // 
+            txtName.Location = new Point(117, 23);
+            txtName.Margin = new Padding(4, 3, 4, 3);
+            txtName.Name = "txtName";
+            txtName.Size = new Size(233, 23);
+            txtName.TabIndex = 1;
+            tooltip.SetToolTip(txtName, "Type the patient's full name here");
+            // 
+            // lblAge
+            // 
+            lblAge.Location = new Point(23, 58);
+            lblAge.Margin = new Padding(4, 0, 4, 0);
+            lblAge.Name = "lblAge";
+            lblAge.Size = new Size(93, 23);
+            lblAge.TabIndex = 2;
+            lblAge.Text = "Age:";
             tooltip.SetToolTip(lblAge, "Enter patient's age");
+            // 
+            // txtAge
+            // 
+            txtAge.Location = new Point(117, 58);
+            txtAge.Margin = new Padding(4, 3, 4, 3);
+            txtAge.Name = "txtAge";
+            txtAge.Size = new Size(233, 23);
+            txtAge.TabIndex = 3;
             tooltip.SetToolTip(txtAge, "Type the patient's age in years");
-            this.Controls.Add(lblAge);
-            this.Controls.Add(txtAge);
-
-            // Gender Label and ComboBox (Dropdown)
-            Label lblGender = new Label() { Text = "Gender:", Location = new System.Drawing.Point(20, 80), Size = new System.Drawing.Size(80, 20) };
-            cmbGender = new ComboBox() { Location = new System.Drawing.Point(100, 80), Size = new System.Drawing.Size(200, 20), DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbGender.Items.AddRange(new string[] { "Male", "Female" }); // Add Male and Female options
+            // 
+            // lblGender
+            // 
+            lblGender.Location = new Point(23, 92);
+            lblGender.Margin = new Padding(4, 0, 4, 0);
+            lblGender.Name = "lblGender";
+            lblGender.Size = new Size(93, 23);
+            lblGender.TabIndex = 4;
+            lblGender.Text = "Gender:";
             tooltip.SetToolTip(lblGender, "Select patient's gender");
+            // 
+            // cmbGender
+            // 
+            cmbGender.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbGender.Items.AddRange(new object[] { "Male", "Female" });
+            cmbGender.Location = new Point(117, 92);
+            cmbGender.Margin = new Padding(4, 3, 4, 3);
+            cmbGender.Name = "cmbGender";
+            cmbGender.Size = new Size(233, 23);
+            cmbGender.TabIndex = 5;
             tooltip.SetToolTip(cmbGender, "Choose Male or Female from the dropdown");
-            this.Controls.Add(lblGender);
-            this.Controls.Add(cmbGender);
-
-            // Phone Label and TextBox
-            Label lblPhone = new Label() { Text = "Phone:", Location = new System.Drawing.Point(20, 110), Size = new System.Drawing.Size(80, 20) };
-            txtPhone = new TextBox() { Location = new System.Drawing.Point(100, 110), Size = new System.Drawing.Size(200, 20) };
+            // 
+            // lblPhone
+            // 
+            lblPhone.Location = new Point(23, 127);
+            lblPhone.Margin = new Padding(4, 0, 4, 0);
+            lblPhone.Name = "lblPhone";
+            lblPhone.Size = new Size(93, 23);
+            lblPhone.TabIndex = 6;
+            lblPhone.Text = "Phone:";
             tooltip.SetToolTip(lblPhone, "Enter contact phone number");
+            // 
+            // txtPhone
+            // 
+            txtPhone.Location = new Point(117, 127);
+            txtPhone.Margin = new Padding(4, 3, 4, 3);
+            txtPhone.Name = "txtPhone";
+            txtPhone.Size = new Size(233, 23);
+            txtPhone.TabIndex = 7;
             tooltip.SetToolTip(txtPhone, "Type the patient's phone number");
-            this.Controls.Add(lblPhone);
-            this.Controls.Add(txtPhone);
-
-            // Address Label and TextBox
-            Label lblAddress = new Label() { Text = "Address:", Location = new System.Drawing.Point(20, 140), Size = new System.Drawing.Size(80, 20) };
-            txtAddress = new TextBox() { Location = new System.Drawing.Point(100, 140), Size = new System.Drawing.Size(200, 20) };
+            // 
+            // lblAddress
+            // 
+            lblAddress.Location = new Point(23, 162);
+            lblAddress.Margin = new Padding(4, 0, 4, 0);
+            lblAddress.Name = "lblAddress";
+            lblAddress.Size = new Size(93, 23);
+            lblAddress.TabIndex = 8;
+            lblAddress.Text = "Address:";
             tooltip.SetToolTip(lblAddress, "Enter patient's address");
+            // 
+            // txtAddress
+            // 
+            txtAddress.Location = new Point(117, 162);
+            txtAddress.Margin = new Padding(4, 3, 4, 3);
+            txtAddress.Name = "txtAddress";
+            txtAddress.Size = new Size(233, 23);
+            txtAddress.TabIndex = 9;
             tooltip.SetToolTip(txtAddress, "Type the patient's residential address");
-            this.Controls.Add(lblAddress);
-            this.Controls.Add(txtAddress);
-
-            // Add Button - Adds a new patient
-            btnAdd = new Button() { Text = "Add Patient", Location = new System.Drawing.Point(100, 180), Size = new System.Drawing.Size(100, 30) };
-            btnAdd.Click += BtnAdd_Click; // When clicked, run BtnAdd_Click method
+            // 
+            // btnAdd
+            // 
+            btnAdd.Location = new Point(117, 242);
+            btnAdd.Margin = new Padding(4, 3, 4, 3);
+            btnAdd.Name = "btnAdd";
+            btnAdd.Size = new Size(117, 35);
+            btnAdd.TabIndex = 10;
+            btnAdd.Text = "Add Patient";
             tooltip.SetToolTip(btnAdd, "Click to add a new patient to the database");
-            this.Controls.Add(btnAdd);
-
-            // Update Button - Updates selected patient
-            btnUpdate = new Button() { Text = "Update", Location = new System.Drawing.Point(210, 180), Size = new System.Drawing.Size(90, 30) };
-            btnUpdate.Click += BtnUpdate_Click; // When clicked, run BtnUpdate_Click method
+            btnAdd.Click += BtnAdd_Click;
+            // 
+            // btnUpdate
+            // 
+            btnUpdate.Location = new Point(245, 242);
+            btnUpdate.Margin = new Padding(4, 3, 4, 3);
+            btnUpdate.Name = "btnUpdate";
+            btnUpdate.Size = new Size(117, 35);
+            btnUpdate.TabIndex = 11;
+            btnUpdate.Text = "Update";
             tooltip.SetToolTip(btnUpdate, "Click to update the selected patient's information");
-            this.Controls.Add(btnUpdate);
-
-            // Delete Button - Deletes selected patient
-            btnDelete = new Button() { Text = "Delete", Location = new System.Drawing.Point(310, 180), Size = new System.Drawing.Size(90, 30) };
-            btnDelete.Click += BtnDelete_Click; // When clicked, run BtnDelete_Click method
+            btnUpdate.UseVisualStyleBackColor = true;
+            btnUpdate.Click += BtnUpdate_Click;
+            // 
+            // btnDelete
+            // 
+            btnDelete.Location = new Point(373, 242);
+            btnDelete.Margin = new Padding(4, 3, 4, 3);
+            btnDelete.Name = "btnDelete";
+            btnDelete.Size = new Size(117, 35);
+            btnDelete.TabIndex = 12;
+            btnDelete.Text = "Delete";
             tooltip.SetToolTip(btnDelete, "Click to delete the selected patient from the database");
-            this.Controls.Add(btnDelete);
-
-            // Clear Button - Clears all fields
-            btnClear = new Button() { Text = "Clear", Location = new System.Drawing.Point(410, 180), Size = new System.Drawing.Size(90, 30) };
-            btnClear.Click += (s, e) => ClearFields(); // When clicked, clear all fields
+            btnDelete.UseVisualStyleBackColor = true;
+            btnDelete.Click += BtnDelete_Click;
+            // 
+            // btnClear
+            // 
+            btnClear.Location = new Point(502, 242);
+            btnClear.Margin = new Padding(4, 3, 4, 3);
+            btnClear.Name = "btnClear";
+            btnClear.Size = new Size(105, 35);
+            btnClear.TabIndex = 13;
+            btnClear.Text = "Clear";
             tooltip.SetToolTip(btnClear, "Click to clear all input fields");
-            this.Controls.Add(btnClear);
-
-            // DataGridView - Shows all patients in a table
-            dgv = new DataGridView() { Location = new System.Drawing.Point(20, 230), Size = new System.Drawing.Size(650, 220) };
-            dgv.ReadOnly = true; // User cannot edit cells directly
-            dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect; // Select entire row when clicked
-            dgv.CellClick += Dgv_CellClick; // When a cell is clicked, run Dgv_CellClick method
+            btnClear.Click += BtnClear_Click;
+            // 
+            // dgv
+            // 
+            dgv.AllowUserToAddRows = false;
+            dgv.AllowUserToDeleteRows = false;
+            dgv.Location = new Point(23, 300);
+            dgv.Margin = new Padding(4, 3, 4, 3);
+            dgv.Name = "dgv";
+            dgv.ReadOnly = true;
+            dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgv.Size = new Size(875, 346);
+            dgv.TabIndex = 14;
             tooltip.SetToolTip(dgv, "Click on any row to select a patient for update or delete");
-            this.Controls.Add(dgv);
+            dgv.CellClick += Dgv_CellClick;
+            // 
+            // PatientForm
+            // 
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(912, 663);
+            Controls.Add(lblEmail);
+            Controls.Add(txtEmail);
+            Controls.Add(lblName);
+            Controls.Add(txtName);
+            Controls.Add(lblAge);
+            Controls.Add(txtAge);
+            Controls.Add(lblGender);
+            Controls.Add(cmbGender);
+            Controls.Add(lblPhone);
+            Controls.Add(txtPhone);
+            Controls.Add(lblAddress);
+            Controls.Add(txtAddress);
+            Controls.Add(btnAdd);
+            Controls.Add(btnUpdate);
+            Controls.Add(btnDelete);
+            Controls.Add(btnClear);
+            Controls.Add(dgv);
+            Margin = new Padding(4, 3, 4, 3);
+            Name = "PatientForm";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Patient Registration";
+            ((System.ComponentModel.ISupportInitialize)dgv).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
         }
+
+        #endregion
 
         // Add Button Click - Adds a new patient to database
         private void BtnAdd_Click(object sender, EventArgs e)
         {
-            // Check if all required fields are filled
-            if (string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtAge.Text) || 
-                cmbGender.SelectedIndex == -1 || string.IsNullOrWhiteSpace(txtPhone.Text))
+           
+            // Validate all inputs
+            if (!ValidateInputs())
             {
-                MessageBox.Show("Please fill all required fields!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return; // Stop here if validation fails
             }
 
             // Create SQL INSERT query to add new patient
-            string query = $"INSERT INTO Patients (Name, Age, Gender, Phone, Address) VALUES " +
-                          $"('{txtName.Text}', {txtAge.Text}, '{cmbGender.Text}', '{txtPhone.Text}', '{txtAddress.Text}')";
+            string query = $"INSERT INTO Patients (Name, Age, Gender, Phone, Address, Email) VALUES " +
+                          $"('{txtName.Text}', {txtAge.Text}, '{cmbGender.Text}', '{txtPhone.Text}', '{txtAddress.Text}', '{txtEmail.Text}')";
 
             // Execute the query
             int result = DB.SetData(query);
-            
+
             // Check if data was added successfully
             if (result > 0)
             {
@@ -149,21 +338,19 @@ namespace SimpleHMS
                 return; // Stop here if no patient is selected
             }
 
-            // Check if all required fields are filled
-            if (string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtAge.Text) || 
-                cmbGender.SelectedIndex == -1 || string.IsNullOrWhiteSpace(txtPhone.Text))
+            // Validate all inputs
+            if (!ValidateInputs())
             {
-                MessageBox.Show("Please fill all required fields!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return; // Stop here if validation fails
             }
 
-            // Create SQL UPDATE query to modify patient's data
+            // Create SQL UPDATE query to modify patient's data (NOW INCLUDES EMAIL)
             string query = $"UPDATE Patients SET Name='{txtName.Text}', Age={txtAge.Text}, Gender='{cmbGender.Text}', " +
-                          $"Phone='{txtPhone.Text}', Address='{txtAddress.Text}' WHERE PatientID={selectedPatientID}";
+                          $"Phone='{txtPhone.Text}', Address='{txtAddress.Text}', Email='{txtEmail.Text}' WHERE PatientID={selectedPatientID}";
 
             // Execute the query
             int result = DB.SetData(query);
-            
+
             // Check if data was updated successfully
             if (result > 0)
             {
@@ -184,7 +371,7 @@ namespace SimpleHMS
             }
 
             // Ask for confirmation before deleting
-            DialogResult confirm = MessageBox.Show("Are you sure you want to delete this patient?", 
+            DialogResult confirm = MessageBox.Show("Are you sure you want to delete this patient?",
                 "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
             // If user clicked Yes
@@ -192,10 +379,10 @@ namespace SimpleHMS
             {
                 // Create SQL DELETE query
                 string query = $"DELETE FROM Patients WHERE PatientID={selectedPatientID}";
-                
+
                 // Execute the query
                 int result = DB.SetData(query);
-                
+
                 // Check if data was deleted successfully
                 if (result > 0)
                 {
@@ -214,30 +401,46 @@ namespace SimpleHMS
             {
                 // Get the clicked row
                 DataGridViewRow row = dgv.Rows[e.RowIndex];
-                
+
                 // Get patient's data from the row and fill the textboxes
                 selectedPatientID = Convert.ToInt32(row.Cells["PatientID"].Value); // Store the ID
-                txtName.Text = row.Cells["Name"].Value.ToString(); // Fill name
+                txtName.Text = row.Cells["FirstName"].Value.ToString(); // Fill name
                 txtAge.Text = row.Cells["Age"].Value.ToString(); // Fill age
                 cmbGender.Text = row.Cells["Gender"].Value.ToString(); // Fill gender
                 txtPhone.Text = row.Cells["Phone"].Value.ToString(); // Fill phone
                 txtAddress.Text = row.Cells["Address"].Value.ToString(); // Fill address
+                txtEmail.Text = row.Cells["Email"].Value.ToString(); // Fill email (FIXED)
             }
         }
 
         // Load all patients from database and show in grid
         private void LoadPatients()
         {
-            // SQL query to get all patients
-            string query = "SELECT PatientID, Name, Age, Gender, Phone, Address FROM Patients";
-            
-            // Execute query and bind results to DataGridView
-            dgv.DataSource = DB.GetData(query);
-            
-            // Hide the PatientID column (we don't need to show it to user)
-            if (dgv.Columns.Contains("PatientID"))
+            try
             {
-                dgv.Columns["PatientID"].Visible = false;
+                // SQL query to get all patients (NOW INCLUDES EMAIL)
+                string query = "SELECT PatientID, Name AS FirstName, Age, Gender, Phone, Address, Email FROM Patients";
+
+                // Execute query and get the data
+                DataTable dt = DB.GetData(query);
+
+                // Bind results to DataGridView
+                dgv.DataSource = dt;
+
+                // Make sure DataGridView is visible and properly configured
+                dgv.Visible = true;
+                dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
+                // Hide the PatientID column (we don't need to show it to user)
+                if (dgv.Columns.Contains("PatientID"))
+                {
+                    dgv.Columns["PatientID"].Visible = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error loading patient data: " + ex.Message, "Database Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -250,7 +453,85 @@ namespace SimpleHMS
             cmbGender.SelectedIndex = -1; // Deselect gender
             txtPhone.Clear(); // Clear phone textbox
             txtAddress.Clear(); // Clear address textbox
+            txtEmail.Clear(); // Clear email textbox (FIXED)
+        }
+
+        // Clear Button Click - Clears all input fields
+        private void BtnClear_Click(object sender, EventArgs e)
+        {
+            ClearFields(); // Clear all input fields
+        }
+
+        // Validate all input fields
+        private bool ValidateInputs()
+        {
+            // Validate Name (only letters, spaces, and minimum length)
+            if (string.IsNullOrWhiteSpace(txtName.Text) || txtName.Text.Length < 3 || !Regex.IsMatch(txtName.Text, @"^[a-zA-Z\s]+$"))
+            {
+                MessageBox.Show("Please enter a valid name (minimum 3 characters, letters only).",
+                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtName.Focus();
+                return false;
+            }
+
+            // Validate Age (must be a number between 1-100)
+            if (!int.TryParse(txtAge.Text, out int age) || age < 1 || age > 100)
+            {
+                MessageBox.Show("Please enter a valid age (1-100).",
+                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtAge.Focus();
+                return false;
+            }
+
+            // Validate Gender selection
+            if (cmbGender.SelectedIndex == -1)
+            {
+                MessageBox.Show("Please select a gender.",
+                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cmbGender.Focus();
+                return false;
+            }
+
+            // Validate Phone (must be 10-15 digits, can include +, -, spaces)
+            if (string.IsNullOrWhiteSpace(txtPhone.Text) || !Regex.IsMatch(txtPhone.Text, @"^[\d\s\-\+]{10,15}$"))
+            {
+                MessageBox.Show("Please enter a valid phone number (10-15 digits).",
+                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPhone.Focus();
+                return false;
+            }
+
+            // Validate Email (FIXED - NOW INCLUDES EMAIL VALIDATION)
+            if (string.IsNullOrWhiteSpace(txtEmail.Text) || !Regex.IsMatch(txtEmail.Text, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                MessageBox.Show("Please enter a valid email address (e.g., example@email.com).",
+                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtEmail.Focus();
+                return false;
+            }
+
+            // All validations passed
+            return true;
+        }
+
+        // Email TextChanged event - Optional: Add real-time validation feedback
+        private void txtEmail_TextChanged(object sender, EventArgs e)
+        {
+            // Optional: You can add real-time email validation here
+            // For example, change the textbox color based on valid/invalid email
+
+            if (string.IsNullOrWhiteSpace(txtEmail.Text))
+            {
+                txtEmail.BackColor = SystemColors.Window; // Default color
+            }
+            else if (Regex.IsMatch(txtEmail.Text, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                txtEmail.BackColor = Color.LightGreen; // Valid email
+            }
+            else
+            {
+                txtEmail.BackColor = Color.LightPink; // Invalid email
+            }
         }
     }
 }
-

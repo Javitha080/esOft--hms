@@ -27,8 +27,7 @@ namespace SimpleHMS
 
         // This method creates all the UI controls (dropdowns, buttons, etc.)
         private void InitializeComponent()
-        {   
-            // icon 
+        {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             Icon = (Icon)resources.GetObject("$this.Icon");
             // Set form properties
@@ -126,7 +125,7 @@ namespace SimpleHMS
 
             // Execute the query
             int result = DB.SetData(query);
-            
+
             // Check if appointment was booked successfully
             if (result > 0)
             {
@@ -163,7 +162,7 @@ namespace SimpleHMS
 
             // Execute the query
             int result = DB.SetData(query);
-            
+
             // Check if appointment was updated successfully
             if (result > 0)
             {
@@ -183,25 +182,65 @@ namespace SimpleHMS
                 return; // Stop here if no appointment is selected
             }
 
+            // First, check if this appointment has any bills associated with it
+            string checkQuery = $"SELECT COUNT(*) FROM Bills WHERE AppointmentID = {selectedAppointmentID}";
+            DataTable result = DB.GetData(checkQuery);
+
+            if (result != null && result.Rows.Count > 0)
+            {
+                int billCount = Convert.ToInt32(result.Rows[0][0]);
+
+                if (billCount > 0)
+                {
+                    MessageBox.Show(
+                        $"Cannot delete this appointment because it has {billCount} associated bill(s).\n\n" +
+                        "Please delete the related bills first before deleting this appointment.",
+                        "Cannot Delete Appointment",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
             // Ask for confirmation before deleting
-            DialogResult confirm = MessageBox.Show("Are you sure you want to cancel this appointment?", 
+            DialogResult confirm = MessageBox.Show("Are you sure you want to cancel this appointment?",
                 "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
             // If user clicked Yes
             if (confirm == DialogResult.Yes)
             {
-                // Create SQL DELETE query
-                string query = $"DELETE FROM Appointments WHERE AppointmentID={selectedAppointmentID}";
-                
-                // Execute the query
-                int result = DB.SetData(query);
-                
-                // Check if appointment was deleted successfully
-                if (result > 0)
+                try
                 {
-                    MessageBox.Show("Appointment cancelled successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    ClearFields(); // Clear all selections
-                    LoadAppointments(); // Refresh the appointment list
+                    // Create SQL DELETE query
+                    string query = $"DELETE FROM Appointments WHERE AppointmentID={selectedAppointmentID}";
+
+                    // Execute the query
+                    int deleteResult = DB.SetData(query);
+
+                    // Check if appointment was deleted successfully
+                    if (deleteResult > 0)
+                    {
+                        MessageBox.Show("Appointment cancelled successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ClearFields(); // Clear all selections
+                        LoadAppointments(); // Refresh the appointment list
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // This should rarely happen now since we check beforehand
+                    if (ex.Message.Contains("REFERENCE constraint") || ex.Message.Contains("foreign key"))
+                    {
+                        MessageBox.Show("Cannot delete this appointment because it has associated bills. " +
+                            "Please delete those bills first.",
+                            "Foreign Key Constraint Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                    }
+                    else
+                    {
+                        // Show the original error message for other types of errors
+                        MessageBox.Show($"Error deleting appointment: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
             }
         }
@@ -209,28 +248,52 @@ namespace SimpleHMS
         // DataGridView Cell Click - When user clicks on a row, load that appointment's data
         private void Dgv_CellClick(object sender, DataGridViewCellEventArgs e)
         {
-            // Check if a valid row was clicked (not header)
-            if (e.RowIndex >= 0)
+            try
             {
-                // Get the clicked row
-                DataGridViewRow row = dgv.Rows[e.RowIndex];
-                
-                // Get appointment's data from the row
-                selectedAppointmentID = Convert.ToInt32(row.Cells["AppointmentID"].Value); // Store the ID
-                
-                // Set patient dropdown to the appointment's patient
-                int patientID = Convert.ToInt32(row.Cells["PatientID"].Value);
-                cmbPatient.SelectedValue = patientID;
-                
-                // Set doctor dropdown to the appointment's doctor
-                int doctorID = Convert.ToInt32(row.Cells["DoctorID"].Value);
-                cmbDoctor.SelectedValue = doctorID;
-                
-                // Set date picker to the appointment's date
-                dtpDate.Value = Convert.ToDateTime(row.Cells["Date"].Value);
-                
-                // Set time picker to the appointment's time
-                dtpTime.Value = DateTime.Parse(row.Cells["Time"].Value.ToString());
+                // Check if a valid row was clicked (not header)
+                if (e.RowIndex >= 0)
+                {
+                    // Get the clicked row
+                    DataGridViewRow row = dgv.Rows[e.RowIndex];
+
+                    // Check for null values before converting
+                    if (row.Cells["AppointmentID"].Value != DBNull.Value)
+                    {
+                        // Get appointment's data from the row
+                        selectedAppointmentID = Convert.ToInt32(row.Cells["AppointmentID"].Value); // Store the ID
+
+                        // Set patient dropdown to the appointment's patient
+                        if (row.Cells["PatientID"].Value != DBNull.Value)
+                        {
+                            int patientID = Convert.ToInt32(row.Cells["PatientID"].Value);
+                            cmbPatient.SelectedValue = patientID;
+                        }
+
+                        // Set doctor dropdown to the appointment's doctor
+                        if (row.Cells["DoctorID"].Value != DBNull.Value)
+                        {
+                            int doctorID = Convert.ToInt32(row.Cells["DoctorID"].Value);
+                            cmbDoctor.SelectedValue = doctorID;
+                        }
+
+                        // Set date picker to the appointment's date
+                        if (row.Cells["Date"].Value != DBNull.Value)
+                        {
+                            dtpDate.Value = Convert.ToDateTime(row.Cells["Date"].Value);
+                        }
+
+                        // Set time picker to the appointment's time
+                        if (row.Cells["Time"].Value != DBNull.Value && row.Cells["Time"].Value != null)
+                        {
+                            dtpTime.Value = DateTime.Parse(row.Cells["Time"].Value.ToString());
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading appointment details: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ClearFields(); // Reset fields on error
             }
         }
 
@@ -239,7 +302,7 @@ namespace SimpleHMS
         {
             // SQL query to get all patients
             DataTable dt = DB.GetData("SELECT PatientID, Name FROM Patients");
-            
+
             // Bind data to patient dropdown
             cmbPatient.DataSource = dt;
             cmbPatient.DisplayMember = "Name"; // Show patient name
@@ -252,7 +315,7 @@ namespace SimpleHMS
         {
             // SQL query to get all doctors
             DataTable dt = DB.GetData("SELECT DoctorID, Name FROM Doctors");
-            
+
             // Bind data to doctor dropdown
             cmbDoctor.DataSource = dt;
             cmbDoctor.DisplayMember = "Name"; // Show doctor name
@@ -272,10 +335,10 @@ namespace SimpleHMS
                             INNER JOIN Patients p ON a.PatientID = p.PatientID
                             INNER JOIN Doctors d ON a.DoctorID = d.DoctorID
                             ORDER BY a.AppointmentDate DESC, a.AppointmentTime DESC";
-            
+
             // Execute query and bind results to DataGridView
             dgv.DataSource = DB.GetData(query);
-            
+
             // Hide ID columns (we don't need to show them to user)
             if (dgv.Columns.Contains("AppointmentID"))
                 dgv.Columns["AppointmentID"].Visible = false;
@@ -296,4 +359,3 @@ namespace SimpleHMS
         }
     }
 }
-

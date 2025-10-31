@@ -1,0 +1,482 @@
+Perfect! I can see your PatientForm code. Now I notice that your Patients table uses a single Name column, not separate FirstName/LastName columns like in the BillingForm.
+Let me update the complete implementation to match your actual database structure:
+
+Updated Implementation for Your System
+1. First, Add Email Column to Patients Table
+Run this SQL:
+sqlUSE [SimpleHospitalDB]
+GO
+
+-- Add Email column to Patients table
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+               WHERE TABLE_NAME = 'Patients' AND COLUMN_NAME = 'Email')
+BEGIN
+    ALTER TABLE Patients
+    ADD Email NVARCHAR(100) NULL;
+END
+GO
+
+2. Update PatientForm to Include Email Field
+Add this to your PatientForm.cs InitializeComponent method (after Address field):
+csharp// Add this at the top with other field declarations
+TextBox txtEmail;
+
+// Add this in InitializeComponent method after txtAddress
+// Email Label and TextBox
+Label lblEmail = new Label() { Text = "Email:", Location = new System.Drawing.Point(20, 170), Size = new System.Drawing.Size(80, 20) };
+txtEmail = new TextBox() { Location = new System.Drawing.Point(100, 170), Size = new System.Drawing.Size(200, 20) };
+tooltip.SetToolTip(lblEmail, "Enter patient's email address");
+tooltip.SetToolTip(txtEmail, "Type the patient's email address for billing");
+this.Controls.Add(lblEmail);
+this.Controls.Add(txtEmail);
+
+// Update button positions (move down by 30 pixels)
+btnAdd.Location = new System.Drawing.Point(100, 210);
+btnUpdate.Location = new System.Drawing.Point(210, 210);
+btnDelete.Location = new System.Drawing.Point(310, 210);
+btnClear.Location = new System.Drawing.Point(410, 210);
+
+// Update DataGridView position
+dgv.Location = new System.Drawing.Point(20, 260);
+Update your validation method:
+csharp// Add email validation to ValidateInputs method
+// Add this before the return true statement
+
+// Validate Email (optional but if provided, must be valid format)
+if (!string.IsNullOrWhiteSpace(txtEmail.Text) && 
+    !Regex.IsMatch(txtEmail.Text, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+{
+    MessageBox.Show("Please enter a valid email address.", 
+        "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+    txtEmail.Focus();
+    return false;
+}
+Update your SQL queries:
+csharp// In BtnAdd_Click method
+string query = $"INSERT INTO Patients (Name, Age, Gender, Phone, Address, Email) VALUES " +
+              $"('{txtName.Text}', {txtAge.Text}, '{cmbGender.Text}', '{txtPhone.Text}', '{txtAddress.Text}', " +
+              $"'{txtEmail.Text}')";
+
+// In BtnUpdate_Click method
+string query = $"UPDATE Patients SET Name='{txtName.Text}', Age={txtAge.Text}, Gender='{cmbGender.Text}', " +
+              $"Phone='{txtPhone.Text}', Address='{txtAddress.Text}', Email='{txtEmail.Text}' " +
+              $"WHERE PatientID={selectedPatientID}";
+
+// In LoadPatients method
+string query = "SELECT PatientID, Name AS FirstName, Age, Gender, Phone, Address, Email FROM Patients";
+
+// In Dgv_CellClick method, add:
+txtEmail.Text = row.Cells["Email"].Value?.ToString() ?? "";
+
+// In ClearFields method, add:
+txtEmail.Clear();
+
+3. Create EmailService.cs (Same as before)
+csharpusing MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+using System;
+using System.IO;
+using System.Threading.Tasks;
+
+namespace SimpleHMS
+{
+    public class EmailService
+    {
+        private readonly string _smtpHost;
+        private readonly int _smtpPort;
+        private readonly string _fromEmail;
+        private readonly string _fromPassword;
+        private readonly string _fromName;
+        private readonly bool _enableSsl;
+
+        public EmailService(string smtpHost, int smtpPort, string fromEmail, 
+                          string fromPassword, string fromName, bool enableSsl = true)
+        {
+            _smtpHost = smtpHost;
+            _smtpPort = smtpPort;
+            _fromEmail = fromEmail;
+            _fromPassword = fromPassword;
+            _fromName = fromName;
+            _enableSsl = enableSsl;
+        }
+
+        public async Task<bool> SendBillEmailAsync(
+            string toEmail, 
+            string toName,
+            string subject,
+            string htmlContent, 
+            byte[] pdfAttachment = null, 
+            string pdfFileName = null)
+        {
+            try
+            {
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(_fromName, _fromEmail));
+                message.To.Add(new MailboxAddress(toName, toEmail));
+                message.Subject = subject;
+
+                var builder = new BodyBuilder();
+                builder.HtmlBody = htmlContent;
+
+                if (pdfAttachment != null && !string.IsNullOrEmpty(pdfFileName))
+                {
+                    builder.Attachments.Add(pdfFileName, pdfAttachment, 
+                        new ContentType("application", "pdf"));
+                }
+
+                message.Body = builder.ToMessageBody();
+
+                using (var client = new SmtpClient())
+                {
+                    await client.ConnectAsync(_smtpHost, _smtpPort, 
+                        _enableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None);
+                    await client.AuthenticateAsync(_fromEmail, _fromPassword);
+                    await client.SendAsync(message);
+                    await client.DisconnectAsync(true);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error sending email: {ex.Message}");
+                throw; // Re-throw to handle in calling method
+            }
+        }
+
+        public async Task<bool> SendTestEmailAsync(string toEmail)
+        {
+            string testHtml = @"
+                <html>
+                <body style='font-family: Arial, sans-serif; padding: 20px;'>
+                    <h2 style='color: #6366f1;'>Email Configuration Test</h2>
+                    <p>This is a test email from your Hospital Management System.</p>
+                    <p>If you received this, your email configuration is working correctly!</p>
+                </body>
+                </html>";
+
+            return await SendBillEmailAsync(toEmail, "Test User", 
+                "Test Email - Hospital Management System", testHtml);
+        }
+    }
+}
+
+4. Update BillingForm - Add Email Button and Methods
+Add these to your BillingForm.cs:
+csharp// Add at the top with other using statements
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+
+// Add button declaration with other controls
+private Button btnEmailBill;
+
+// In InitializeComponent method, add after btnPrintPDF:
+btnEmailBill = new Button();
+btnEmailBill.Location = new Point(450, 729);
+btnEmailBill.Name = "btnEmailBill";
+btnEmailBill.Size = new Size(90, 23);
+btnEmailBill.TabIndex = 12;
+btnEmailBill.Text = "Email Bill";
+btnEmailBill.UseVisualStyleBackColor = true;
+btnEmailBill.Click += BtnEmailBill_Click;
+this.Controls.Add(btnEmailBill);
+
+// Add these methods to BillingForm class:
+
+private async void BtnEmailBill_Click(object sender, EventArgs e)
+{
+    if (selectedBillID == 0)
+    {
+        MessageBox.Show("Please select a bill to email.", "Information",
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
+        return;
+    }
+
+    try
+    {
+        // Get patient email from database
+        string patientEmail = GetPatientEmail();
+        
+        if (string.IsNullOrEmpty(patientEmail))
+        {
+            MessageBox.Show("Patient does not have an email address on file.\n\nPlease update patient information to add email.", 
+                "Email Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        // Confirm email address
+        var confirmResult = MessageBox.Show(
+            $"Send bill to: {patientEmail}?\n\nPatient: {cmbPatient.Text}\nBill: {txtBillNumber.Text}", 
+            "Confirm Email", 
+            MessageBoxButtons.YesNo, 
+            MessageBoxIcon.Question);
+        
+        if (confirmResult != DialogResult.Yes)
+            return;
+
+        // Show progress
+        this.Cursor = Cursors.WaitCursor;
+        btnEmailBill.Enabled = false;
+        btnEmailBill.Text = "Sending...";
+
+        // Ask if user wants to attach PDF
+        var attachPdf = MessageBox.Show(
+            "Do you want to attach the bill as PDF?", 
+            "Attach PDF", 
+            MessageBoxButtons.YesNo, 
+            MessageBoxIcon.Question);
+
+        // Generate HTML content
+        string htmlContent = GenerateBillHtmlForEmail();
+        
+        // Generate PDF if requested
+        byte[] pdfBytes = null;
+        string pdfFileName = null;
+        
+        if (attachPdf == DialogResult.Yes)
+        {
+            pdfBytes = GenerateBillPdfBytes();
+            pdfFileName = $"Bill_{txtBillNumber.Text}.pdf";
+        }
+
+        // **IMPORTANT: Replace these with your actual email credentials**
+        var emailService = new EmailService(
+            smtpHost: "smtp.gmail.com",
+            smtpPort: 587,
+            fromEmail: "your-hospital-email@gmail.com",  // ← CHANGE THIS
+            fromPassword: "your-app-password-here",       // ← CHANGE THIS
+            fromName: "MediCare Plus Hospital"
+        );
+
+        // Send email
+        string subject = $"Hospital Bill - Invoice #{txtBillNumber.Text}";
+        bool success = await emailService.SendBillEmailAsync(
+            patientEmail,
+            cmbPatient.Text,
+            subject,
+            htmlContent,
+            pdfBytes,
+            pdfFileName
+        );
+
+        // Reset UI
+        this.Cursor = Cursors.Default;
+        btnEmailBill.Enabled = true;
+        btnEmailBill.Text = "Email Bill";
+
+        if (success)
+        {
+            MessageBox.Show(
+                $"Bill emailed successfully!\n\nSent to: {patientEmail}\nBill: {txtBillNumber.Text}", 
+                "Success", 
+                MessageBoxButtons.OK, 
+                MessageBoxIcon.Information);
+        }
+    }
+    catch (Exception ex)
+    {
+        // Reset UI
+        this.Cursor = Cursors.Default;
+        btnEmailBill.Enabled = true;
+        btnEmailBill.Text = "Email Bill";
+        
+        MessageBox.Show(
+            $"Error sending email:\n\n{ex.Message}\n\nPlease check:\n" +
+            "1. Email configuration is correct\n" +
+            "2. Internet connection is active\n" +
+            "3. Gmail app password is valid", 
+            "Error", 
+            MessageBoxButtons.OK, 
+            MessageBoxIcon.Error);
+    }
+}
+
+private string GetPatientEmail()
+{
+    try
+    {
+        if (cmbPatient.SelectedValue == null) 
+            return null;
+        
+        int patientId = Convert.ToInt32(cmbPatient.SelectedValue);
+        
+        using (var conn = DB.GetConnection())
+        {
+            conn.Open();
+            string query = "SELECT Email FROM Patients WHERE PatientID = @PatientID";
+            using (var cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@PatientID", patientId);
+                var result = cmd.ExecuteScalar();
+                return result?.ToString();
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Error getting patient email: {ex.Message}");
+        return null;
+    }
+}
+
+private string GenerateBillHtmlForEmail()
+{
+    // Read your HTML template
+    string templatePath = @"c:\Users\user\source\repos\HMS00\HMS00\BillTemplate.html";
+    string htmlTemplate = "";
+
+    if (File.Exists(templatePath))
+    {
+        htmlTemplate = File.ReadAllText(templatePath);
+    }
+    else
+    {
+        htmlTemplate = GetEmbeddedHtmlTemplate();
+    }
+
+    // Replace placeholders
+    htmlTemplate = htmlTemplate
+        .Replace("{BillNumber}", txtBillNumber.Text)
+        .Replace("{BillDate}", dtpBillDate.Value.ToString("MMM dd, yyyy"))
+        .Replace("{DueDate}", dtpBillDate.Value.AddDays(30).ToString("MMM dd, yyyy"))
+        .Replace("{PatientName}", cmbPatient.Text)
+        .Replace("{PatientID}", cmbPatient.SelectedValue?.ToString() ?? "N/A")
+        .Replace("{AgeGender}", "N/A") // You can fetch this from DB if needed
+        .Replace("{DoctorName}", cmbDoctor.Text)
+        .Replace("{Department}", "General") // You can fetch this from DB if needed
+        .Replace("{LicenseNo}", "N/A") // You can fetch this from DB if needed
+        .Replace("{ConsultationFee}", txtConsultationFee.Text)
+        .Replace("{MedicineFee}", txtMedicineFee.Text)
+        .Replace("{TestFee}", txtTestFee.Text)
+        .Replace("{OtherFee}", txtOtherFee.Text)
+        .Replace("{Discount}", txtDiscount.Text)
+        .Replace("{TotalAmount}", txtTotalAmount.Text)
+        .Replace("{PaymentStatus}", cmbPaymentStatus.Text)
+        .Replace("{PaymentMethod}", cmbPaymentMethod.Text)
+        .Replace("{PaymentDate}", dtpPaymentDate.Value.ToString("MMM dd, yyyy"))
+        .Replace("{PaymentStatusClass}", cmbPaymentStatus.Text.ToLower());
+
+    // Generate bill items rows
+    StringBuilder billItemsRows = new StringBuilder();
+    foreach (DataRow row in billItemsTable.Rows)
+    {
+        string category = row["ItemType"].ToString();
+        string categoryClass = "badge-other";
+        
+        if (category.ToLower().Contains("consultation"))
+            categoryClass = "badge-consultation";
+        else if (category.ToLower().Contains("medicine"))
+            categoryClass = "badge-medicine";
+        else if (category.ToLower().Contains("test"))
+            categoryClass = "badge-test";
+        
+        billItemsRows.AppendLine("<tr>");
+        billItemsRows.AppendLine($"    <td class=\"item-name\">{row["ItemName"]}</td>");
+        billItemsRows.AppendLine($"    <td><span class=\"category-badge {categoryClass}\">{row["ItemType"]}</span></td>");
+        billItemsRows.AppendLine($"    <td class=\"text-center\">{row["Quantity"]}</td>");
+        billItemsRows.AppendLine($"    <td class=\"text-right amount\">${row["UnitPrice"]}</td>");
+        billItemsRows.AppendLine($"    <td class=\"text-right amount\">${row["TotalPrice"]}</td>");
+        billItemsRows.AppendLine("</tr>");
+    }
+    
+    htmlTemplate = htmlTemplate.Replace("<!-- {BillItemsRows} -->", billItemsRows.ToString());
+
+    // Add notes if available
+    if (!string.IsNullOrEmpty(txtNotes.Text))
+    {
+        string notesSection = $@"
+        <div class=""notes-container"">
+            <div class=""notes-title"">
+                <span class=""notes-icon"">!</span>
+                Notes
+            </div>
+            <div class=""notes-content"">
+                {txtNotes.Text.Replace(Environment.NewLine, "<br/>")}
+            </div>
+        </div>";
+        htmlTemplate = htmlTemplate.Replace("<!-- {NotesSection} -->", notesSection);
+    }
+    else
+    {
+        htmlTemplate = htmlTemplate.Replace("<!-- {NotesSection} -->", "");
+    }
+
+    return htmlTemplate;
+}
+
+private byte[] GenerateBillPdfBytes()
+{
+    try
+    {
+        IronPdf.License.LicenseKey = "IRONSUITE.BDJKODK.GMAIL.COM.14389-970815E96F-DFP6ETPPGKB6JJ-KLZR3VKUDOUX-5SOZQNC7OVZU-GMEM5CUVRVMW-NUKGG5LDPZYX-QMSOA4AYZLZU-ZLY2HE-TQDK6K74E3GQEA-DEPLOYMENT.TRIAL-WAHROD.TRIAL.EXPIRES.26.NOV.2025";
+
+        string tempHtmlPath = Path.Combine(Path.GetTempPath(), 
+            $"Bill_{txtBillNumber.Text}_temp.html");
+        GenerateBillPDF(tempHtmlPath);
+
+        var renderer = new ChromePdfRenderer();
+        var renderOptions = new ChromePdfRenderOptions()
+        {
+            PaperSize = IronPdf.Rendering.PdfPaperSize.A4,
+            MarginTop = 20,
+            MarginBottom = 20,
+            MarginLeft = 20,
+            MarginRight = 20
+        };
+        renderer.RenderingOptions = renderOptions;
+
+        var pdf = renderer.RenderHtmlFileAsPdf(tempHtmlPath);
+        byte[] pdfBytes = pdf.BinaryData;
+        
+        // Clean up
+        if (File.Exists(tempHtmlPath))
+        {
+            File.Delete(tempHtmlPath);
+        }
+        
+        return pdfBytes;
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Error generating PDF: {ex.Message}");
+        return null;
+    }
+}
+
+5. Install Required Package
+bashdotnet add package MailKit
+
+6. Setup Gmail App Password
+
+Go to https://myaccount.google.com/security
+Enable 2-Step Verification
+Go to App Passwords
+Create new app password for "Mail"
+Copy the 16-character password
+Use it in the fromPassword parameter
+
+
+7. Test the Implementation
+
+Update a patient with email (use your own email for testing)
+Create a bill for that patient
+Click "Email Bill" button
+Check your email inbox
+
+
+Quick Summary:
+✅ Added Email column to Patients table
+✅ Updated PatientForm to capture email
+✅ Created EmailService with MailKit
+✅ Added "Email Bill" button to BillingForm
+✅ Reuses your existing HTML template
+✅ Optional PDF attachment
+✅ Proper error handling
+Don't forget to:
+
+Replace your-hospital-email@gmail.com with your actual Gmail
+Replace your-app-password-here with your Gmail app password
+
+Need help with any specific part?RetryClaude does not have the ability to run the code it generates yet.Claude can make mistakes. Please double-check responses.

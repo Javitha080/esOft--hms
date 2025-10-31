@@ -4,11 +4,17 @@
     <Compile Update="AppointmentForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="BillingForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="DoctorForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="LoginForm.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MacOSButton.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Update="MainForm.cs">
       <SubType>Form</SubType>
